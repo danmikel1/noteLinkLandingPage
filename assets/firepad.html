@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.css" />
+    
+    <!-- CodeMirror modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/xml/xml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/css/css.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/htmlmixed/htmlmixed.js"></script>
+
+    <!-- Firepad -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firepad@1.5.9/dist/firepad.css" />
+    <script src="https://cdn.jsdelivr.net/npm/firepad@1.5.9/dist/firepad.min.js"></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html, body {
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+
+      #firepad-container {
+        height: 100vh;
+        width: 100vw;
+      }
+
+      /* CodeMirror customization */
+      .CodeMirror {
+        height: 100% !important;
+        width: 100% !important;
+      }
+
+      /* Firepad customization */
+      .firepad {
+        height: 100%;
+        width: 100%;
+      }
+
+      /* Clean toolbar styling */
+      .firepad-toolbar {
+        border: none !important;
+        box-shadow: none !important;
+        background: #f8f9fa;
+        padding: 8px;
+      }
+
+      .firepad-btn {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        margin: 0 2px;
+        padding: 4px 8px;
+        transition: background-color 0.2s;
+      }
+
+      .firepad-btn:hover {
+        background-color: #e9ecef !important;
+        border-radius: 4px;
+      }
+
+      .firepad-btn.selected {
+        background-color: #e9ecef !important;
+        border-radius: 4px;
+      }
+
+      /* Custom cursor styling */
+      .firepad-cursor {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .cursor-label {
+        background: inherit;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 12px;
+        color: white;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="firepad-container"></div>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDJvmKDk_PW0tmllopMwL5i15Ma3Ul6w3A",
+        authDomain: "editor-127df.firebaseapp.com",
+        databaseURL: "https://editor-127df-default-rtdb.asia-southeast1.firebasedatabase.app"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const roomId = "demo-room-123";
+      const firepadRef = firebase.database().ref("docs").child(roomId);
+
+      const codeMirror = CodeMirror(document.getElementById("firepad-container"), {
+        lineWrapping: true,
+        mode: "htmlmixed",
+        viewportMargin: Infinity
+      });
+
+      // Create Firepad with custom user id and random number
+      const firepad = Firepad.fromCodeMirror(firepadRef, codeMirror, {
+        richTextToolbar: true,
+        richTextShortcuts: true,
+        userId: Math.floor(Math.random() * 1000000).toString(),
+        userDisplayName: Math.floor(Math.random() * 1000000).toString()
+      });
+
+      // Override the default cursor implementation
+      firepad.on('ready', function() {
+        if (firepad.isHistoryEmpty()) {
+          firepad.setHtml("<h2>Collaborative Editor</h2><p>Start typing to test it out!</p>");
+        }
+
+        // Custom cursor handler
+        const originalSetupAnnotations = firepad.editor_.annotationList_.setupAnnotations;
+        firepad.editor_.annotationList_.setupAnnotations = function(annotations) {
+          originalSetupAnnotations.call(this, annotations);
+          
+          annotations.forEach(function(annotation) {
+            if (annotation.userId && annotation.cursor) {
+              const cursorEl = annotation.element;
+              if (cursorEl) {
+                const label = document.createElement('div');
+                label.className = 'cursor-label';
+                label.style.backgroundColor = annotation.color;
+                label.textContent = '#' + annotation.userId.slice(0, 4);
+                cursorEl.appendChild(label);
+              }
+            }
+          });
+        };
+      });
+    </script>
+  </body>
+</html>
